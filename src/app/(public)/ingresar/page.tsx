@@ -216,12 +216,12 @@ export default function LoginPage() {
 							<p className="text-center text-sm text-muted-foreground">
 								¿No tienes una cuenta?{' '}
 								<Link
-									href="/register"
+									href="/registro"
 									className="font-semibold text-primary hover:text-primary/80 transition-colors">
 									Crear cuenta
 								</Link>
 							</p>
-							<Link href="/shop" className="w-full text-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2 pt-2">
+							<Link href="/" className="w-full text-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2 pt-2">
 								← Volver a la tienda
 							</Link>
 						</CardFooter>

@@ -21,7 +21,7 @@ export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const pathname = usePathname()
-  const isAuthPage = ['/login', '/register'].includes(pathname)
+  const isAuthPage = ['/ingresar', '/registro'].includes(pathname)
 
   const profileMenuRef = React.useRef<HTMLDivElement>(null)
 
@@ -198,7 +198,7 @@ export default function Navbar() {
                 <span>Mis Pedidos</span>
               </Link>
 
-              <Link href="/login" className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${isScrolled ? 'bg-primary/10 hover:bg-primary/20 text-primary' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
+              <Link href="/ingresar" className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${isScrolled ? 'bg-primary/10 hover:bg-primary/20 text-primary' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
                 Iniciar Sesión
               </Link>
             </div>
@@ -252,10 +252,10 @@ export default function Navbar() {
                 </>
               ) : (
                 <div className="grid grid-cols-2 gap-4 mt-2">
-                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center p-4 rounded-xl bg-muted font-bold text-center">
+                  <Link href="/ingresar" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center p-4 rounded-xl bg-muted font-bold text-center">
                     Iniciar Sesión
                   </Link>
-                  <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center p-4 rounded-xl bg-primary text-primary-foreground font-bold text-center shadow-lg shadow-primary/20">
+                  <Link href="/registro" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center p-4 rounded-xl bg-primary text-primary-foreground font-bold text-center shadow-lg shadow-primary/20">
                     Registrarse
                   </Link>
                 </div>

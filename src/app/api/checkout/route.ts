@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
             const { data: product, error } = await supabase
                 .from('products')
-                .select('stock, name, price, sale_price, description, category')
+                .select('stock, stock_by_size, name, price, sale_price, description, category')
                 .eq('id', item.id)
                 .single();
 
@@ -60,15 +60,71 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: 'product.not_found_dynamic', params: { item: item.title || 'Unknown' } }, { status: 400 });
             }
 
-            if (product.stock < item.quantity) {
+            let availableStock = product.stock;
+            let finalPrice = product.sale_price || product.price;
+
+            // Handle Size-specific Stock/Price
+            if (item.size && product.stock_by_size) {
+                console.log(`[Checkout Debug] Processing Size: "${item.size}" for Product: "${product.name}"`);
+                const availableKeys = Object.keys(product.stock_by_size);
+                console.log(`[Checkout Debug] Stock By Size keys available:`, availableKeys);
+
+                // Try exact match
+                let sizeData = product.stock_by_size[item.size];
+
+                // Try Case-Insensitive Match if not found
+                if (!sizeData) {
+                    const lowerSize = item.size.toLowerCase();
+                    const matchedKey = availableKeys.find(k => k.toLowerCase() === lowerSize);
+                    if (matchedKey) {
+                        console.log(`[Checkout Debug] Found case-insensitive match: "${matchedKey}" for "${item.size}"`);
+                        sizeData = product.stock_by_size[matchedKey];
+                    }
+                }
+
+                console.log(`[Checkout Debug] Size Data found:`, sizeData);
+
+                if (typeof sizeData === 'number') {
+                    availableStock = sizeData;
+                } else if (sizeData && typeof sizeData === 'object') {
+                    // @ts-ignore
+                    availableStock = sizeData.stock ?? 0;
+                    // @ts-ignore
+                    if (sizeData.sale_price) finalPrice = sizeData.sale_price;
+                    // @ts-ignore
+                    else if (sizeData.price) finalPrice = sizeData.price;
+                } else {
+                    console.log(`[Checkout Debug] Size "${item.size}" NOT found in stock_by_size. Keys: [${availableKeys.join(', ')}]. Falling back to global stock: ${product.stock}`);
+                }
+            } else {
+                console.log(`[Checkout Debug] No size selected or no stock_by_size. Using global stock: ${product.stock}`);
+            }
+
+            // Fallback for null stock
+            if (availableStock === null || availableStock === undefined) {
+                console.log(`[Checkout Debug] Available stock was null/undefined, treating as UNLIMITED (999999)`);
+                availableStock = 999999;
+            }
+
+            console.log(`[Checkout Debug] Final Check -> Item Quantity: ${item.quantity}, Available: ${availableStock}`);
+
+            if (availableStock < item.quantity) {
+                console.error(`[Checkout Debug] validation failed. Stock: ${availableStock} < Qty: ${item.quantity}`);
                 return NextResponse.json({
                     error: 'cart.error_stock_dynamic',
-                    params: { product: product.name, stock: product.stock }
+                    params: { product: product.name, stock: availableStock },
+                    debug_info: {
+                        product: product.name,
+                        requested_size: item.size,
+                        available_stock_resolved: availableStock,
+                        available_sizes_in_db: product.stock_by_size ? Object.keys(product.stock_by_size) : 'No sizes',
+                        global_stock: product.stock
+                    }
                 }, { status: 400 });
             }
 
-            const price = product.sale_price || product.price
-            calculatedSubtotal += price * item.quantity
+            // Price already calculated above as finalPrice
+            calculatedSubtotal += finalPrice * item.quantity
 
             // Prepare Item for MP
             validatedItems.push({
@@ -77,7 +133,7 @@ export async function POST(req: Request) {
                 description: product.description?.substring(0, 250),
                 category_id: product.category,
                 quantity: Number(item.quantity),
-                price: Number(price),
+                price: Number(finalPrice),
             });
 
             // Prepare Item for DB
@@ -85,7 +141,7 @@ export async function POST(req: Request) {
                 order_id: orderId,
                 product_id: item.id,
                 quantity: item.quantity,
-                price_at_time: price,
+                price_at_time: finalPrice,
                 size: item.size || 'Estándar' // We need size passed from client item
             });
         }
@@ -120,7 +176,12 @@ export async function POST(req: Request) {
 
         if (insertError) {
             console.error('DB Insert Order Error:', insertError);
-            throw new Error('checkout.error.create_order');
+            return NextResponse.json({
+                error: 'checkout.error.create_order',
+                details: insertError,
+                message: insertError.message,
+                hint: insertError.hint
+            }, { status: 500 });
         }
 
         // 2. Insert Items
@@ -130,8 +191,12 @@ export async function POST(req: Request) {
 
         if (itemsError) {
             console.error('DB Insert Items Error:', itemsError);
-            // Should rollback order? For now throw.
-            throw new Error('checkout.error.create_items');
+            return NextResponse.json({
+                error: 'checkout.error.create_items',
+                details: itemsError,
+                message: itemsError.message,
+                hint: itemsError.hint
+            }, { status: 500 });
         }
 
         console.log(`Order ${orderId} created successfully. Payment Method: ${paymentMethod}`);

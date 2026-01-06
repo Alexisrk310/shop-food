@@ -36,11 +36,13 @@ export async function middleware(request: NextRequest) {
 
   // Protect Dashboard routes
   if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const redirectUrl = new URL('/ingresar', request.url)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
   // Redirect authenticated users from auth pages
-  if (['/login', '/register'].includes(request.nextUrl.pathname) && user) {
+  if (['/ingresar', '/registro'].includes(request.nextUrl.pathname) && user) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 

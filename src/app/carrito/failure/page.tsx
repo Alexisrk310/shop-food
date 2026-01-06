@@ -52,7 +52,7 @@ function FailureContent() {
 
           <button
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-border/50 bg-background hover:bg-muted/50 font-semibold transition-all hover:border-foreground/20"
-            onClick={() => window.open('https://api.whatsapp.com/send?phone=573001234567', '_blank')}
+            onClick={() => window.open(`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '573012266530'}`, '_blank')}
           >
             <HelpCircle className="w-4 h-4" /> Contactar Soporte
           </button>

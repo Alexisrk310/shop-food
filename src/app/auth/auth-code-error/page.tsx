@@ -11,7 +11,7 @@ export default function AuthCodeError() {
         El enlace que utilizaste ya no es válido. Por favor, solicita uno nuevo.
       </p>
       <Link
-        href="/login"
+        href="/ingresar"
         className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
       >
         Volver al inicio de sesión

@@ -33,7 +33,7 @@ export function WhatsAppButton() {
           </AnimatePresence>
 
           <motion.a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '573000000000'}`}
+            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '573012266530'}`}
             target="_blank"
             rel="noopener noreferrer"
             className="relative group flex items-center justify-center"

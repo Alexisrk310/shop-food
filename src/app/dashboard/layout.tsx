@@ -18,7 +18,7 @@ export default function DashboardLayout({
   useEffect(() => {
     // Basic Client-side protection
     if (!loading && !user) {
-      router.push('/login')
+      router.push('/ingresar')
     }
   }, [user, loading, router])
 

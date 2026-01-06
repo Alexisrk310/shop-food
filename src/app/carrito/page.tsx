@@ -78,11 +78,8 @@ export default function CartPage() {
       return
     }
 
-    if (!user) {
-      addToast('Debes iniciar sesión para continuar', 'error')
-      router.push('/auth/login?redirect=/carrito')
-      return
-    }
+    // Guest Checkout Allowed - Removed blocking check
+    // if (!user) { ... }
 
     // Validate Form
     if (!formData.name || !formData.email || !formData.address || !formData.city || !formData.phone) {
@@ -136,20 +133,20 @@ ${formData.city} - Tel: ${formData.phone}
 ${formData.notes ? `Notas: ${formData.notes}` : ''}`
 
         // PHONE NUMBER: TODO replace with env
-        const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '573000000000'
+        const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '573012266530'
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
 
         // Clear cart and redirect
         clearCart()
-        window.open(url, '_blank')
-        window.location.href = '/'
+        // Use full page redirect to avoid popup blockers
+        window.location.href = url
 
       } else if (data.url) {
         // Mercado Pago Flow
         addToast('Redirigiendo a MercadoPago...', 'success')
         window.location.href = data.url
       } else {
-        console.error('Checkout failed. Server response:', data)
+        console.error('Checkout failed. Server response:', JSON.stringify(data, null, 2))
         const serverError = data.error || 'Error al iniciar el checkout'
         addToast(serverError, 'error')
       }

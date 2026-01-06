@@ -282,11 +282,15 @@ export default function DashboardOrders() {
         doc.text(`${order.city} - Tel: ${order.phone}`, 120, 72)
 
         // Payment Info in Invoice
-        if (order.payment_info?.payer?.identification) {
-            doc.text(`${order.payment_info.payer.identification.type}: ${order.payment_info.payer.identification.number}`, 120, 76)
-        }
-        if (order.payment_info?.payment_method_id) {
-            doc.text(`Método: ${order.payment_info.payment_method_id.toUpperCase()} - ${order.payment_info.payment_type_id?.replace('_', ' ')}`, 120, 80)
+        if (order.payment_method === 'whatsapp') {
+            doc.text('Método: WHATSAPP', 120, 80)
+        } else {
+            if (order.payment_info?.payer?.identification) {
+                doc.text(`${order.payment_info.payer.identification.type}: ${order.payment_info.payer.identification.number}`, 120, 76)
+            }
+            if (order.payment_info?.payment_method_id) {
+                doc.text(`Método: ${order.payment_info.payment_method_id.toUpperCase()} - ${order.payment_info.payment_type_id?.replace('_', ' ')}`, 120, 80)
+            }
         }
 
         // -- Dates --
@@ -732,7 +736,21 @@ export default function DashboardOrders() {
                                             <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">PAGO</h3>
                                         </div>
 
-                                        {selectedOrder.payment_info ? (
+                                        {selectedOrder.payment_method === 'whatsapp' ? (
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-muted-foreground">Método:</span>
+                                                    <span className="font-bold uppercase text-[#25D366] flex items-center gap-1">
+                                                        <Phone className="w-4 h-4" /> WhatsApp
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 bg-[#25D366]/10 rounded-xl border border-[#25D366]/20">
+                                                    <p className="text-xs text-foreground/80 leading-relaxed">
+                                                        El pedido se realizó vía WhatsApp. Recuerda verificar la transferencia o el pago contraentrega.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : selectedOrder.payment_info ? (
                                             <div className="space-y-2">
                                                 {selectedOrder.payment_info.payment_method_id && (
                                                     <div className="flex justify-between items-center text-sm">

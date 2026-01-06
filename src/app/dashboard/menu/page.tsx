@@ -36,6 +36,9 @@ export default function ProductsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
+  // Archive State
+  const [showArchived, setShowArchived] = useState(false)
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -47,7 +50,7 @@ export default function ProductsPage() {
     images: [] as string[],
     enableSizes: false,
     sizes: [] as { id: string; name: string; price: string; stock: string; sale_price: string }[],
-    stock: '' // Add stock field
+    stock: ''
   })
 
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -57,7 +60,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+  }, [showArchived]) // Re-fetch when toggle changes
 
   // Prevent scrolling when modal is open
   useEffect(() => {
@@ -86,6 +89,7 @@ export default function ProductsPage() {
       const { data, error } = await supabase
         .from('products')
         .select('*, reviews(rating)')
+        .eq('is_archived', showArchived) // Filter based on toggle
         .order('created_at', { ascending: false })
 
       if (!error && data) {
@@ -95,6 +99,22 @@ export default function ProductsPage() {
       console.error(e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUnarchive = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_archived: false })
+        .eq('id', id)
+
+      if (error) throw error
+      toast.success('Producto restaurado correctamente')
+      fetchProducts() // Refresh list
+    } catch (error: any) {
+      console.error('Error unarchiving:', error)
+      toast.error('Error al restaurar producto')
     }
   }
 
@@ -213,15 +233,43 @@ export default function ProductsPage() {
     if (!confirm('¿Estás seguro de que quieres eliminar este producto?')) return
 
     try {
+      // 1. Delete from cart_items first
+      const { error: cartError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('product_id', id)
+
+      if (cartError) console.error('Error cleaning cart items:', cartError)
+
+      // 2. Try hard delete
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', id)
 
-      if (error) throw error
+      if (error) {
+        // 3. Fallback to Soft Delete if FK error
+        // Postgres Error 23503 = foreign_key_violation
+        if (error.code === '23503') {
+          const { error: archiveError } = await supabase
+            .from('products')
+            .update({ is_archived: true })
+            .eq('id', id)
+
+          if (archiveError) throw archiveError
+          toast.success('Producto archivado (tiene ventas históricas)')
+        } else {
+          throw error
+        }
+      } else {
+        toast.success('Producto eliminado correctamente')
+      }
+
       await fetchProducts()
     } catch (error) {
-      console.error('Error deleting product:', error)
+      console.error('Error deleting product:', JSON.stringify(error, null, 2))
+      // @ts-ignore
+      alert(`Error al eliminar el producto: ${error.message || JSON.stringify(error)}`)
     }
   }
 
@@ -384,6 +432,19 @@ export default function ProductsPage() {
             <option value="Bebidas">Bebidas</option>
           </select>
 
+          <div className="flex items-center gap-2 px-2">
+            <input
+              type="checkbox"
+              id="show-archived"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="w-5 h-5 rounded border-border accent-primary cursor-pointer"
+            />
+            <label htmlFor="show-archived" className="font-semibold cursor-pointer select-none text-sm whitespace-nowrap">
+              Ver Archivados
+            </label>
+          </div>
+
         </div>
       </div>
 
@@ -448,18 +509,30 @@ export default function ProductsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openModal(product)}
-                            className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {showArchived ? (
+                            <button
+                              onClick={() => handleUnarchive(product.id)}
+                              className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-green-500 transition-colors"
+                              title="Restaurar"
+                            >
+                              <Upload className="w-4 h-4 rotate-180" /> {/* Rotate upload to look like restore/download or use RefreshCw */}
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => openModal(product)}
+                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product.id)}
+                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -487,18 +560,30 @@ export default function ProductsPage() {
                     <div className="flex justify-between items-start">
                       <h3 className="font-semibold text-sm line-clamp-1">{product.name}</h3>
                       <div className="flex gap-1">
-                        <button
-                          onClick={() => openModal(product)}
-                          className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {showArchived ? (
+                          <button
+                            onClick={() => handleUnarchive(product.id)}
+                            className="p-1.5 text-muted-foreground hover:text-green-500 transition-colors"
+                            title="Restaurar"
+                          >
+                            <Upload className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => openModal(product)}
+                              className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 mb-2">{product.category}</p>

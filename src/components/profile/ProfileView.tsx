@@ -93,7 +93,7 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
 
     useEffect(() => {
         if (!authLoading && !user) {
-            router.push('/login')
+            router.push('/ingresar')
             return
         }
         if (user) {

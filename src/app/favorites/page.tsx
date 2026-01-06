@@ -52,7 +52,7 @@ export default function FavoritesPage() {
             <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
                 <h1 className="text-3xl font-bold mb-4">Favoritos</h1>
                 <p className="text-muted-foreground mb-8 text-lg">Inicia sesión para ver tus favoritos</p>
-                <Link href="/login" className="bg-primary text-white px-8 py-3 rounded-xl font-medium">
+                <Link href="/ingresar" className="bg-primary text-white px-8 py-3 rounded-xl font-medium">
                     Iniciar Sesión
                 </Link>
             </div>

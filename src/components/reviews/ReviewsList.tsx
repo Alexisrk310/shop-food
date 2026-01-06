@@ -204,7 +204,7 @@ export default function ReviewsList({ productId }: { productId: string }) {
                                 {permissionError === 'already_reviewed' && 'Ya has escrito una reseña para este producto'}
                             </p>
                             {permissionError === 'not_logged_in' && (
-                                <a href="/login" className="text-primary hover:underline text-sm font-bold">Iniciar Sesión</a>
+                                <a href="/ingresar" className="text-primary hover:underline text-sm font-bold">Iniciar Sesión</a>
                             )}
                         </div>
                     )}
