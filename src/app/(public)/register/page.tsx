@@ -11,8 +11,10 @@ import {
 	CardDescription,
 	CardFooter,
 	CardHeader,
+
 	CardTitle,
 } from '@/components/ui/card';
+import { Modal } from '@/components/ui/Modal';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -25,6 +27,8 @@ import { registerSchema, RegisterValues } from '@/lib/validations/auth';
 export default function RegisterPage() {
 	const [loading, setLoading] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [showVerifyModal, setShowVerifyModal] = useState(false);
+	const [registeredEmail, setRegisteredEmail] = useState('');
 	const { user } = useAuth();
 	const router = useRouter();
 
@@ -63,8 +67,13 @@ export default function RegisterPage() {
 			setSubmitError(error.message);
 			setLoading(false);
 		} else {
-			router.push(`/login?message=Cuenta creada exitosamente. Por favor verifica tu correo.`);
+			setRegisteredEmail(data.email);
+			setShowVerifyModal(true);
 		}
+	}
+
+	const handleModalConfirm = () => {
+		router.push('/login');
 	}
 
 	return (
@@ -225,6 +234,28 @@ export default function RegisterPage() {
 					</Card>
 				</div>
 			</div>
+
+
+			<Modal
+				isOpen={showVerifyModal}
+				onClose={handleModalConfirm}
+				onConfirm={handleModalConfirm}
+				title="¡Verifica tu Correo!"
+				description={
+					<div className="space-y-4">
+						<p>Hemos enviado un enlace de confirmación a:</p>
+						<div className="font-bold text-lg text-primary bg-primary/10 p-3 rounded-xl border border-primary/20 break-all shadow-inner">
+							{registeredEmail}
+						</div>
+						<p className="text-sm">
+							Por favor, revisa tu bandeja de entrada (y la carpeta de spam) para activar tu cuenta y comenzar a disfrutar de Foodies.
+						</p>
+					</div>
+				}
+				confirmText="Ir a Iniciar Sesión"
+				cancelText="Cerrar"
+				variant="success"
+			/>
 		</div>
 	);
 }

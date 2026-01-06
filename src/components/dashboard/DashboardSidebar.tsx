@@ -21,9 +21,9 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
       { href: '/dashboard', label: 'Panel', icon: LayoutDashboard },
       { href: '/dashboard/menu', label: 'Comida', icon: ShoppingBag },
       { href: '/dashboard/ordenes', label: 'Pedidos', icon: Truck },
-      { href: '/dashboard/reviews', label: 'Reseñas', icon: MessageSquare },
-      { href: '/dashboard/users', label: 'Usuarios', icon: Users },
-      { href: '/dashboard/security', label: 'Seguridad', icon: Shield },
+      { href: '/dashboard/resenas', label: 'Reseñas', icon: MessageSquare },
+      { href: '/dashboard/usuarios', label: 'Usuarios', icon: Users },
+      { href: '/dashboard/seguridad', label: 'Seguridad', icon: Shield },
    ]
 
    const handleLogout = async () => {

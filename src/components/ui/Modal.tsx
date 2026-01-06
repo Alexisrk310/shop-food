@@ -9,7 +9,7 @@ interface ModalProps {
   onClose: () => void
   onConfirm?: () => void
   title: string
-  description: string
+  description: string | React.ReactNode
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning' | 'info' | 'success'
@@ -123,9 +123,15 @@ export function Modal({
                 <h3 className="text-2xl font-bold text-foreground mb-2 tracking-tight">
                   {title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed max-w-sm mx-auto">
-                  {description}
-                </p>
+                {typeof description === 'string' ? (
+                  <p className="text-muted-foreground leading-relaxed max-w-sm mx-auto">
+                    {description}
+                  </p>
+                ) : (
+                  <div className="text-muted-foreground leading-relaxed max-w-sm mx-auto">
+                    {description}
+                  </div>
+                )}
 
                 {/* Children (e.g. Inputs) */}
                 {children && (

@@ -36,10 +36,10 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           const val = product.stock_by_size[size];
           if (typeof val === 'number') return val > 0;
           // @ts-ignore
-          if (typeof val === 'object') return (val?.stock || 0) > 0;
+          if (typeof val === 'object') return (val?.stock === null || val?.stock === undefined) ? true : (val.stock > 0);
           return false;
         }
-        return (product.stock || 0) > 0
+        return product.stock === null || (product.stock || 0) > 0
       })
       if (firstAvailable) {
         setSelectedSize(firstAvailable)
@@ -52,28 +52,49 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   // ... (skipping useEffect for rating)
 
   const checkStock = (size: string) => {
-    if (product.stock_by_size) {
+    if (product.stock_by_size && size) {
       const val = product.stock_by_size[size];
       if (typeof val === 'number') return val > 0;
       // @ts-ignore
-      if (typeof val === 'object') return (val?.stock || 0) > 0;
+      if (typeof val === 'object') {
+        // @ts-ignore
+        const s = val?.stock;
+        return s === null || s === undefined || s > 0;
+      }
     }
-    return (product.stock || 0) > 0
+    // For simple products or if no size specific logic matches (robustness)
+    return product.stock === null || (product.stock || 0) > 0
   }
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!checkStock(selectedSize)) {
+    // For sized products, we need a size. For simple products, we don't.
+    // However, the card *always* tries to select a size if sizes exist.
+    // If displayedSizes is empty, selectedSize might be null/empty.
+    const hasSizes = (product.stock_by_size && Object.keys(product.stock_by_size).length > 0) || (product.sizes && product.sizes.length > 0);
+
+    if (hasSizes && !selectedSize) {
+      addToast('Por favor selecciona un tamaño', 'error')
+      return;
+    }
+
+    if (hasSizes && !checkStock(selectedSize)) {
       addToast('No puedes agregar más ítems de los disponibles en stock', 'error')
       return
     }
 
-    let availableStock = product.stock || 0;
+    // Check main stock if no sizes
+    if (!hasSizes && !checkStock('')) {
+      addToast('No puedes agregar más ítems de los disponibles en stock', 'error')
+      return
+    }
+
+    let availableStock = product.stock === null ? 9999 : (product.stock || 0);
     let effectivePrice = product.sale_price || product.price;
 
-    if (product.stock_by_size && product.stock_by_size[selectedSize]) {
+    if (hasSizes && product.stock_by_size && product.stock_by_size[selectedSize]) {
       const val = product.stock_by_size[selectedSize] as any;
       if (typeof val === 'number') {
         availableStock = val;
@@ -96,12 +117,12 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       price: effectivePrice,
       image_url: product.images?.[0] || product.image_url || '/placeholder.png',
       description: product.description,
-      size: selectedSize,
+      size: hasSizes ? selectedSize : undefined,
       stock: availableStock
     })
 
     if (success) {
-      addToast(`Agregado al carrito (${selectedSize})`, 'success')
+      addToast(`Agregado al carrito`, 'success')
     } else {
       addToast('Has alcanzado el límite de stock disponible para este producto', 'error')
     }
@@ -122,7 +143,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       )}
 
       {/* Sale Badge */}
-      {(product.sale_price || (product.stock_by_size && product.stock_by_size[selectedSize] && typeof product.stock_by_size[selectedSize] === 'object' && (product.stock_by_size[selectedSize] as any).sale_price)) && (
+      {(product.sale_price || (selectedSize && product.stock_by_size && product.stock_by_size[selectedSize] && typeof product.stock_by_size[selectedSize] === 'object' && (product.stock_by_size[selectedSize] as any).sale_price)) && (
         <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-red-500 to-pink-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full backdrop-blur-md shadow-lg animate-pulse">
           PROMO
         </div>
@@ -156,16 +177,33 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
           {/* Size Selector */}
           <div className="flex justify-center gap-1 bg-black/40 p-1.5 rounded-xl backdrop-blur-md" onClick={(e) => e.preventDefault()}>
-            {(product.stock_by_size ? Object.keys(product.stock_by_size) : []).length > 0
-              ? Object.keys(product.stock_by_size!).map(size => {
+            {(() => {
+              // Determine which sizes to display
+              let displayedSizes: string[] = [];
+              if (product.stock_by_size && Object.keys(product.stock_by_size).length > 0) {
+                displayedSizes = Object.keys(product.stock_by_size);
+              } else if (product.sizes && product.sizes.length > 0) {
+                displayedSizes = product.sizes;
+              }
+              // Removed default fallback to ['Personal', 'Mediano', 'Familiar']
+
+              if (displayedSizes.length === 0) return null;
+
+              return displayedSizes.map(size => {
                 // Check availability safely
-                const val = product.stock_by_size![size];
                 let isAvailable = false;
-                if (typeof val === 'number') isAvailable = val > 0;
-                else if (typeof val === 'object') {
-                  const stockVal = (val as any)?.stock;
-                  // If stockVal is null or undefined, it's infinite -> Available
-                  isAvailable = (stockVal === null || stockVal === undefined) ? true : stockVal > 0;
+
+                if (product.stock_by_size) {
+                  const val = product.stock_by_size[size];
+                  if (typeof val === 'number') isAvailable = val > 0;
+                  else if (typeof val === 'object') {
+                    const stockVal = (val as any)?.stock;
+                    // If stockVal is null or undefined, it's infinite -> Available
+                    isAvailable = (stockVal === null || stockVal === undefined) ? true : stockVal > 0;
+                  }
+                } else {
+                  // Fallback: check global stock if no specific size stock is tracked
+                  isAvailable = product.stock === null || (product.stock || 0) > 0;
                 }
 
                 return (
@@ -190,10 +228,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                     )}
                   </button>
                 )
-              }) : (
-                // Fallback if no sizes defined (single size)
-                null
-              )}
+              })
+            })()}
           </div>
           {selectedSize && product.stock_by_size && (
             <div className="text-[10px] text-white/90 text-center font-medium">

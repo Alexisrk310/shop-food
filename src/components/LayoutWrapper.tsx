@@ -12,8 +12,9 @@ export default function LayoutWrapper({
 }) {
     const pathname = usePathname();
     const isAuthPage = pathname === '/login' || pathname === '/register';
+    const isDashboard = pathname?.startsWith('/dashboard');
 
-    if (isAuthPage) {
+    if (isAuthPage || isDashboard) {
         return <>{children}</>;
     }
 

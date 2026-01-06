@@ -80,7 +80,7 @@ export default function DashboardOrders() {
     const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
-    const [searchQuery, setSearchQuery] = useState('')
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
     const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
     // Modal States
@@ -100,7 +100,11 @@ export default function DashboardOrders() {
                 setSelectedOrder(order)
             }
         }
-    }, [openOrderId, orders])
+        const searchParam = searchParams.get('search')
+        if (searchParam) {
+            setSearchQuery(searchParam)
+        }
+    }, [openOrderId, orders, searchParams])
 
     // Prevent body scroll when modal is open
     useEffect(() => {

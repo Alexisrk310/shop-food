@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Bell, User, ShoppingBag, Star, Info, MessageSquare, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,6 +19,7 @@ interface DashboardNavbarProps {
 export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
   const { user, role, signOut } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const { addToast } = useToast()
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
@@ -139,6 +140,11 @@ export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    router.push(`/dashboard/ordenes?search=${searchQuery}`)
+                  }
+                }}
                 placeholder="Buscar..."
                 className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               />
@@ -238,9 +244,9 @@ export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                                     : type === 'ORDER_UPDATE' && activity.metadata?.order_id
                                       ? `/dashboard/ordenes?openOrderId=${activity.metadata.order_id}`
                                       : type === 'USER_UPDATE' && activity.metadata?.target_user_id
-                                        ? `/dashboard/users?openUserId=${activity.metadata.target_user_id}`
+                                        ? `/dashboard/usuarios?openUserId=${activity.metadata.target_user_id}`
                                         : type === 'NEW_REVIEW' && activity.metadata?.product_id
-                                          ? `/dashboard/reviews?highlightProductId=${activity.metadata.product_id}`
+                                          ? `/dashboard/resenas?highlightProductId=${activity.metadata.product_id}`
                                           : '#'
                                 }
                                 key={activity.id}

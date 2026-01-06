@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-import { useToast } from '@/components/ui/Toast'
+import { toast } from 'sonner'
 import { SHIPPING_RATES } from '@/config/shipping'
 
 interface Address {
@@ -29,7 +29,7 @@ type Tab = 'general' | 'addresses' | 'security'
 export function ProfileView({ isDashboard = false, initialTab = 'general', showSidebar = true }: { isDashboard?: boolean; initialTab?: Tab; showSidebar?: boolean }) {
     const { user, loading: authLoading } = useAuth()
     const router = useRouter()
-    const { addToast } = useToast()
+
 
     const [activeTab, setActiveTab] = useState<Tab>(initialTab)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -163,9 +163,9 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
         try {
             const { error } = await supabase.from('profiles').update({ gender }).eq('id', user.id)
             if (error) throw error
-            addToast('Perfil actualizado correctamente', 'success')
+            toast.success('Perfil actualizado correctamente')
         } catch (error: any) {
-            addToast(error.message, 'error')
+            toast.error(error.message)
         } finally {
             setSavingProfile(false)
         }
@@ -195,15 +195,18 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
             const { error } = await supabase.auth.updateUser({ password: newPassword })
             if (error) throw error
 
-            addToast('Contraseña actualizada correctamente', 'success')
+            toast.success('Contraseña actualizada correctamente')
             setNewPassword('')
             setConfirmPassword('')
             setCurrentPassword('')
             setErrors({})
         } catch (error: any) {
-            addToast(error.message, 'error')
+            toast.error(error.message)
         } finally {
-            setChangingPassword(false)
+            // Use setTimeout to ensure state update prevents race conditions with auth updates
+            setTimeout(() => {
+                setChangingPassword(false)
+            }, 0)
         }
     }
 
@@ -218,7 +221,7 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
 
         const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
         if (!profile) {
-            addToast('Error: Perfil de usuario no encontrado', 'error')
+            toast.error('Error: Perfil de usuario no encontrado')
             return
         }
 
@@ -236,17 +239,17 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
 
             if (error) {
                 console.error('Supabase Error:', error)
-                addToast(`Error al guardar: ${error.message}`, 'error')
+                toast.error(`Error al guardar: ${error.message}`)
             } else {
                 setNewAddress({ recipient_name: '', address_line1: '', neighborhood: '', city: '', phone: '', is_default: false })
                 setIsAddingAddress(false)
                 fetchAddresses()
-                addToast('Dirección guardada correctamente', 'success')
+                toast.success('Dirección guardada correctamente')
                 setErrors({})
             }
         } catch (e: any) {
             console.error(e)
-            addToast(`Error inesperado: ${e.message}`, 'error')
+            toast.error(`Error inesperado: ${e.message}`)
         } finally {
             setSubmittingAddress(false)
         }

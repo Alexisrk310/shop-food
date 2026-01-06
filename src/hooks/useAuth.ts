@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react' // ref imported
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -10,6 +10,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<string | null>(null)
+  const lastUserId = useRef<string | undefined>(undefined)
   const router = useRouter()
 
   useEffect(() => {
@@ -40,20 +41,23 @@ export function useAuth() {
     // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        const currentUserId = session?.user?.id
+        const previousUserId = lastUserId.current
+
         setSession(session)
         setUser(session?.user ?? null)
 
+        // Update role if user exists
         if (session?.user) {
+          /* ... existing role logic ... */
           const { data, error } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
             .single()
 
-          if (error) {
-            if (error.code !== 'PGRST116') {
-              console.error('Error updating role:', error.message)
-            }
+          if (error && error.code !== 'PGRST116') {
+            console.error('Error updating role:', error.message)
           }
 
           const normalizedRole = data?.role?.toLowerCase() || 'user'
@@ -63,9 +67,15 @@ export function useAuth() {
         }
 
         setLoading(false)
+
+        // Only refresh if the user changed (Login/Logout) to avoid disrupting re-auth flows
         if (_event === 'SIGNED_IN') {
-          router.refresh()
+          if (currentUserId !== previousUserId) {
+            router.refresh()
+          }
         }
+
+        lastUserId.current = currentUserId
       }
     )
 

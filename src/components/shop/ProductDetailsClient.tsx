@@ -51,31 +51,60 @@ export default function ProductDetailsClient() {
         if (product) {
             const sizesToDisplay = product.stock_by_size && Object.keys(product.stock_by_size).length > 0
                 ? Object.keys(product.stock_by_size)
-                : (product.sizes && product.sizes.length > 0 ? product.sizes : ['Personal', 'Mediano', 'Familiar'])
+                : (product.sizes && product.sizes.length > 0 ? product.sizes : [])
 
-            const firstAvailable = sizesToDisplay.find(size => {
-                const stock = product.stock_by_size
-                    ? (product.stock_by_size[size] || 0)
-                    : (product.stock || 0)
-                return stock > 0
-            })
+            if (sizesToDisplay.length > 0) {
+                const firstAvailable = sizesToDisplay.find(size => {
+                    const stock = product.stock_by_size
+                        ? (product.stock_by_size[size] || 0)
+                        : (product.stock || 0)
 
-            if (firstAvailable) {
-                setSelectedSize(firstAvailable)
-            } else if (sizesToDisplay.length > 0) {
-                setSelectedSize(sizesToDisplay[0])
+                    // Handle complex object structure if needed (though useEffect usually runs on normalized data?)
+                    // Assuming standard structure: if simple number, check > 0. If object ref, check inside.
+                    // But wait, here it seems to access directly.
+                    // Let's be safe:
+                    if (product.stock_by_size) {
+                        const val = product.stock_by_size[size];
+                        // @ts-ignore
+                        if (typeof val === 'object') return (val?.stock === null || val?.stock === undefined || val.stock > 0);
+                        if (typeof val === 'number') return val > 0;
+                    }
+
+                    return product.stock === null || (product.stock || 0) > 0
+                })
+
+                if (firstAvailable) {
+                    setSelectedSize(firstAvailable)
+                } else if (sizesToDisplay.length > 0) {
+                    setSelectedSize(sizesToDisplay[0])
+                }
+            } else {
+                // No sizes, clear selection
+                setSelectedSize('')
             }
         }
     }, [product])
 
     const handleAddToCart = async () => {
         if (product) {
-            if (product.stock_by_size && product.stock_by_size[selectedSize] < quantity) {
+            if (selectedSize && product.stock_by_size) {
+                const val = product.stock_by_size[selectedSize];
+                let stock = 0;
+                // @ts-ignore
+                if (typeof val === 'object') stock = (val?.stock === null || val?.stock === undefined) ? 9999 : val.stock;
+                else if (typeof val === 'number') stock = val;
+
+                if (stock < quantity) {
+                    addToast('No hay suficiente stock', 'error')
+                    return
+                }
+            } else if (product.stock !== null && (product.stock || 0) < quantity) {
                 addToast('No hay suficiente stock', 'error')
                 return
             }
+
             const effectivePrice = product.sale_price || product.price
-            const success = await addItem({ ...product, price: effectivePrice, size: selectedSize, quantity })
+            const success = await addItem({ ...product, price: effectivePrice, size: selectedSize || undefined, quantity })
 
             if (success) {
                 addToast('Agregado al carrito', 'success')
@@ -135,14 +164,13 @@ export default function ProductDetailsClient() {
         : [product.image_url || '/placeholder.png']
 
     // Effective Price Logic
-    // Effective Price Logic
     const effectivePrice = product.sale_price || product.price
     const oldPrice = product.sale_price ? product.price : product.compare_at_price
 
     // Dynamic Size Logic
     const sizesToDisplay = product.stock_by_size && Object.keys(product.stock_by_size).length > 0
         ? Object.keys(product.stock_by_size)
-        : []
+        : (product.sizes && product.sizes.length > 0 ? product.sizes : [])
 
     // Calculate dynamic price based on selection
     const getDynamicPrice = () => {
@@ -266,6 +294,7 @@ export default function ProductDetailsClient() {
                                 {(() => {
                                     const currentStock = product.stock_by_size
                                         ? (() => {
+                                            if (!selectedSize) return 0;
                                             const val = product.stock_by_size[selectedSize]
                                             if (typeof val === 'number') return val
                                             // @ts-ignore
@@ -282,13 +311,14 @@ export default function ProductDetailsClient() {
                                             Agotado
                                         </span>
                                     )
-                                })()}
-                            </div>
+                                })()
+                                }
+                            </div >
 
                             <p className="text-lg text-muted-foreground leading-relaxed">
                                 {product.description}
                             </p>
-                        </div>
+                        </div >
 
                         <div className="space-y-8 flex-grow">
                             {/* Size Selector */}
@@ -305,27 +335,41 @@ export default function ProductDetailsClient() {
                                             // Fallback logic for stock availability
                                             const val = product.stock_by_size ? product.stock_by_size[size] : 0
                                             let stock = 0
+                                            let isUnlimited = false;
+
                                             if (typeof val === 'number') stock = val
                                             // @ts-ignore
-                                            else stock = val?.stock || 0
+                                            else {
+                                                stock = val?.stock || 0
+                                                // @ts-ignore
+                                                if (val?.stock === null || val?.stock === undefined) isUnlimited = true;
+                                            }
+
+                                            // Fallback for array sizes without explicit stock
+                                            if (!product.stock_by_size) {
+                                                isUnlimited = product.stock === null;
+                                                stock = product.stock || 0;
+                                            }
+
+                                            const isDisabled = !isUnlimited && stock === 0;
 
                                             return (
                                                 <button
                                                     key={size}
                                                     onClick={() => setSelectedSize(size)}
-                                                    disabled={stock === 0}
+                                                    disabled={isDisabled}
                                                     className={`
                                             h-12 rounded-xl border-2 font-bold text-sm transition-all relative overflow-hidden
                                             ${selectedSize === size
                                                             ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                                                            : stock === 0
+                                                            : isDisabled
                                                                 ? 'border-dashed border-border text-muted-foreground/30 cursor-not-allowed bg-muted/20'
                                                                 : 'border-border text-foreground hover:border-primary/50 hover:bg-muted'
                                                         }
                                         `}
                                                 >
                                                     {size}
-                                                    {stock === 0 && (
+                                                    {isDisabled && (
                                                         <div className="absolute inset-0 flex items-center justify-center">
                                                             <div className="w-full h-px bg-destructive/50 rotate-45 transform scale-125" />
                                                         </div>
@@ -362,6 +406,7 @@ export default function ProductDetailsClient() {
                                         disabled={(() => {
                                             const currentStock = product.stock_by_size
                                                 ? (() => {
+                                                    if (!selectedSize) return 0;
                                                     const val = product.stock_by_size[selectedSize]
                                                     // @ts-ignore
                                                     if (typeof val === 'number') return val
@@ -378,6 +423,7 @@ export default function ProductDetailsClient() {
                                         {(() => {
                                             const currentStock = product.stock_by_size
                                                 ? (() => {
+                                                    if (!selectedSize) return 0;
                                                     const val = product.stock_by_size[selectedSize]
                                                     if (typeof val === 'number') return val
                                                     // @ts-ignore
@@ -402,14 +448,14 @@ export default function ProductDetailsClient() {
                                 <span className="text-xs font-bold text-muted-foreground uppercase">Envío Rápido y Seguro</span>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </div >
+                </div >
 
                 {/* Reviews Section */}
-                <div className="mt-24 pt-12 border-t border-border/50">
+                < div className="mt-24 pt-12 border-t border-border/50" >
                     <ReviewsList productId={product.id} />
-                </div>
-            </div>
-        </div>
+                </div >
+            </div >
+        </div >
     )
 }

@@ -12,8 +12,8 @@ export interface Product {
     category?: string
     sale_price?: number
     is_new?: boolean
-    stock?: number
-    stock_by_size?: Record<string, number>
+    stock?: number | null
+    stock_by_size?: Record<string, number | { price: number; stock: number | null; sale_price?: number }>
     compare_at_price?: number
     sizes?: string[]
 }

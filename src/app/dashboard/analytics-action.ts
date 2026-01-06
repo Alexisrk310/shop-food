@@ -5,40 +5,40 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 // Helper to get admin client for analytics across all users
 const getAdminSupabase = () => {
-    return createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 }
 
 // Helper to verify owner (same as in coupon actions)
 const checkOwner = async () => {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return false
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
 
-    const adminClient = getAdminSupabase()
-    const { data: profile } = await adminClient
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-    
-    return profile?.role === 'owner'
+  const adminClient = getAdminSupabase()
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  return profile?.role === 'owner'
 }
 
 export async function getAnalyticsData(dateRange: '7d' | '30d' | '90d' = '30d') {
   // Verify owner first
   const isOwner = await checkOwner()
   if (!isOwner) {
-      console.warn('Unauthorized access attempt to analytics')
-      return { data: [], stats: { totalSales: 0, totalOrders: 0, avgTicket: 0, newCustomers: 0 }, recentOrders: [] }
+    console.warn('Unauthorized access attempt to analytics')
+    return { data: [], stats: { totalSales: 0, totalOrders: 0, avgTicket: 0, newCustomers: 0 }, recentOrders: [] }
   }
 
   const supabase = getAdminSupabase()
   const now = new Date()
   let startDate = new Date()
-  
+
   if (dateRange === '7d') startDate.setDate(now.getDate() - 7)
   else if (dateRange === '30d') startDate.setDate(now.getDate() - 30)
   else if (dateRange === '90d') startDate.setDate(now.getDate() - 90)
@@ -71,24 +71,24 @@ export async function getAnalyticsData(dateRange: '7d' | '30d' | '90d' = '30d') 
 
   let formattedRecentOrders: any[] = []
   if (rawRecentOrders && rawRecentOrders.length > 0) {
-      const userIds = rawRecentOrders.map(o => o.user_id).filter(Boolean)
-      let profilesMap: Record<string, string> = {}
-      
-      if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-              .from('profiles')
-              .select('id, full_name')
-              .in('id', userIds)
-          profiles?.forEach(p => { profilesMap[p.id] = p.full_name || 'User' })
-      }
+    const userIds = rawRecentOrders.map(o => o.user_id).filter(Boolean)
+    let profilesMap: Record<string, string> = {}
 
-      formattedRecentOrders = rawRecentOrders.map(o => ({
-          id: o.id,
-          created_at: o.created_at,
-          total: o.total,
-          status: o.status,
-          customer_name: o.user_id ? (profilesMap[o.user_id] || 'User') : (o.customer_email || 'Guest')
-      }))
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+      profiles?.forEach(p => { profilesMap[p.id] = p.full_name || 'User' })
+    }
+
+    formattedRecentOrders = rawRecentOrders.map(o => ({
+      id: o.id,
+      created_at: o.created_at,
+      total: o.total,
+      status: o.status,
+      customer_name: o.user_id ? (profilesMap[o.user_id] || 'User') : (o.customer_email || 'Guest')
+    }))
   }
 
   // 4. Group Data
@@ -112,37 +112,41 @@ export async function getAnalyticsData(dateRange: '7d' | '30d' | '90d' = '30d') 
   const totalOrders = orders?.length || 0
   const avgTicket = totalOrders > 0 ? totalSales / totalOrders : 0
 
-  return { 
-    data: chartData, 
+  return {
+    data: chartData,
     stats: {
-        totalSales,
-        totalOrders,
-        avgTicket,
-        newCustomers: newCustomers || 0
+      totalSales,
+      totalOrders,
+      avgTicket,
+      newCustomers: newCustomers || 0
     },
     recentOrders: formattedRecentOrders
   }
 }
 
 export async function getInventoryAlerts() {
-    const isOwner = await checkOwner()
-    if (!isOwner) return { lowStock: [], outOfStock: [] }
+  const isOwner = await checkOwner()
+  if (!isOwner) return { lowStock: [], outOfStock: [] }
 
-    const supabase = getAdminSupabase()
-    
-    // Low stock items (assuming stock < 5 is low)
-    const { data: lowStock } = await supabase
-        .from('products')
-        .select('id, name, stock, stock_by_size')
-        .lt('stock', 5)
-        .limit(5)
+  const supabase = getAdminSupabase()
 
-    // Out of stock
-    const { data: outOfStock } = await supabase
-        .from('products')
-        .select('id, name')
-        .eq('stock', 0)
-        .limit(5)
+  // Low stock items (stock between 1 and 4)
+  // Exclude null (unlimited) and 0 (out of stock)
+  const { data: lowStock } = await supabase
+    .from('products')
+    .select('id, name, stock, stock_by_size')
+    .lt('stock', 5)
+    .gt('stock', 0)
+    .not('stock', 'is', null)
+    .limit(5)
 
-    return { lowStock, outOfStock }
+  // Out of stock
+  const { data: outOfStock } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('stock', 0)
+    .not('stock', 'is', null)
+    .limit(5)
+
+  return { lowStock, outOfStock }
 }

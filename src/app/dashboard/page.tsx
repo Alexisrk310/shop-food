@@ -358,7 +358,7 @@ export default function DashboardOverview() {
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex justify-between items-center">
           <h3 className="text-lg font-bold text-foreground">Pedidos Recientes</h3>
-          <button className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">Ver Todos</button>
+          <a href="/dashboard/ordenes" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">Ver Todos</a>
         </div>
         <div className="overflow-x-auto">
           {loading ? (

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { TableSkeleton } from '@/components/dashboard/skeletons'
 // import { useLanguage } from '@/components/LanguageProvider'
+import { toast } from 'sonner'
 
 interface Product {
   id: string
@@ -18,7 +19,9 @@ interface Product {
   images: string[]
   is_featured?: boolean
   reviews?: { rating: number }[]
-
+  sizes?: string[]
+  stock_by_size?: Record<string, { price: number; stock: number | null; sale_price?: number }>
+  stock?: number | null
 }
 
 export default function ProductsPage() {
@@ -30,6 +33,7 @@ export default function ProductsPage() {
 
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   // Form State
@@ -42,11 +46,8 @@ export default function ProductsPage() {
     is_featured: false,
     images: [] as string[],
     enableSizes: false,
-    sizes: {
-      Personal: { price: '', stock: '', sale_price: '' },
-      Mediano: { price: '', stock: '', sale_price: '' },
-      Familiar: { price: '', stock: '', sale_price: '' },
-    }
+    sizes: [] as { id: string; name: string; price: string; stock: string; sale_price: string }[],
+    stock: '' // Add stock field
   })
 
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -147,16 +148,14 @@ export default function ProductsPage() {
       const allImages = [...formData.images, ...uploadedImages]
 
       // Prepare Sizes Payload
-      let stock_by_size = {}
+      let stock_by_size: Record<string, any> = {}
       if (formData.enableSizes) {
-        Object.entries(formData.sizes).forEach(([sizeName, config]) => {
-          if (config.price) { // Only add if price is set
-            // @ts-ignore
-            // @ts-ignore
-            stock_by_size[sizeName] = {
-              price: parseFloat(config.price),
-              stock: config.stock ? parseInt(config.stock) : null,
-              sale_price: config.sale_price ? parseFloat(config.sale_price) : undefined
+        formData.sizes.forEach((size) => {
+          if (size.name && size.price) { // Only add if name and price are set
+            stock_by_size[size.name] = {
+              price: parseFloat(size.price),
+              stock: size.stock ? parseInt(size.stock) : null, // empty or null means unlimited
+              sale_price: size.sale_price ? parseFloat(size.sale_price) : undefined
             }
           }
         })
@@ -164,14 +163,24 @@ export default function ProductsPage() {
 
       const payload = {
         name: formData.name,
-        price: parseFloat(formData.price),
+        // Ensure price is never null. If sizes enabled, take lowest price from sizes or default 0.
+        price: formData.enableSizes
+          ? (Object.values(stock_by_size).length > 0
+            ? Math.min(...Object.values(stock_by_size).map((s: any) => s.price))
+            : 0)
+          : parseFloat(formData.price),
         sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
         description: formData.description,
         category: formData.category,
 
         is_featured: formData.is_featured,
         images: allImages,
-        stock_by_size: Object.keys(stock_by_size).length > 0 ? stock_by_size : null
+        stock_by_size: Object.keys(stock_by_size).length > 0 ? stock_by_size : null,
+        // For simple products, save stock if sizes are disabled.
+        // If enableSizes is true, stock should be null (managed by stock_by_size potentially, or ignored).
+        // Actually if sizes are enabled, main stock is usually ignored or sum of sizes.
+        // Let's explicitly set it.
+        stock: !formData.enableSizes ? (formData.stock ? parseInt(formData.stock) : null) : null
       }
 
       if (editingProduct) {
@@ -226,11 +235,8 @@ export default function ProductsPage() {
       is_featured: false,
       images: [],
       enableSizes: false,
-      sizes: {
-        Personal: { price: '', stock: '', sale_price: '' },
-        Mediano: { price: '', stock: '', sale_price: '' },
-        Familiar: { price: '', stock: '', sale_price: '' },
-      }
+      sizes: [],
+      stock: ''
     })
     setImageFiles([])
     setImagePreviews([])
@@ -241,31 +247,32 @@ export default function ProductsPage() {
     setEditingProduct(product)
     if (product) {
       // @ts-ignore
-      const existingSizes = product.sizes || product.stock_by_size || {};
+      const existingSizes = product.stock_by_size || product.sizes || {};
       const hasSizes = Object.keys(existingSizes).length > 0;
-
-      const parsedSizes = {
-        Personal: { price: '', stock: '', sale_price: '' },
-        Mediano: { price: '', stock: '', sale_price: '' },
-        Familiar: { price: '', stock: '', sale_price: '' },
-      }
+      let parsedSizes: any[] = [];
 
       if (hasSizes) {
-        Object.keys(parsedSizes).forEach(key => {
-          // @ts-ignore
-          if (existingSizes[key]) {
-            // @ts-ignore
-            parsedSizes[key] = {
-              // @ts-ignore
-              price: existingSizes[key].price?.toString() || '',
-              // @ts-ignore
-              // @ts-ignore
-              stock: existingSizes[key].stock?.toString() || '',
-              // @ts-ignore
-              sale_price: existingSizes[key].sale_price?.toString() || ''
-            }
-          }
-        })
+        // Handle array case if it's legacy 'sizes' array of strings, we need to convert to object structure conceptually or just ignore?
+        // Actually product.sizes is string[]. product.stock_by_size is JSON.
+        // If stock_by_size exists, use it.
+        if (product.stock_by_size && Object.keys(product.stock_by_size).length > 0) {
+          parsedSizes = Object.entries(product.stock_by_size).map(([name, detail]: [string, any]) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            name: name,
+            price: detail.price?.toString() || '',
+            stock: detail.stock?.toString() || '',
+            sale_price: detail.sale_price?.toString() || ''
+          }));
+        } else if (Array.isArray(product.sizes) && product.sizes.length > 0) {
+          // Fallback for legacy simple sizes array
+          parsedSizes = product.sizes.map(size => ({
+            id: Math.random().toString(36).substr(2, 9),
+            name: size,
+            price: product.price?.toString() || '', // Inherit base price
+            stock: '',
+            sale_price: ''
+          }));
+        }
       }
 
       setFormData({
@@ -277,8 +284,8 @@ export default function ProductsPage() {
         is_featured: product.is_featured || false,
         images: product.images || [],
         enableSizes: hasSizes,
-        // @ts-ignore
-        sizes: parsedSizes
+        sizes: parsedSizes,
+        stock: product.stock !== null && product.stock !== undefined ? product.stock.toString() : ''
       })
     } else {
       resetForm()
@@ -303,9 +310,6 @@ export default function ProductsPage() {
   })
 
   const handleDeleteAll = async () => {
-    if (!confirm('⚠️ ¿ESTÁS SEGURO? Esto eliminará TODOS los productos del menú permanentemente.')) return
-    if (!confirm('⚠️ Confirmación final: Esta acción NO se puede deshacer. ¿Eliminar todo?')) return
-
     try {
       setLoading(true)
       // Delete all products by selecting those where id is not the nil UUID
@@ -317,10 +321,11 @@ export default function ProductsPage() {
       if (error) throw error
 
       await fetchProducts()
-      alert('Todos los productos han sido eliminados correctamente.')
+      setIsDeleteModalOpen(false)
+      toast.success('Todos los productos han sido eliminados correctamente.')
     } catch (error: any) {
       console.error('Error deleting all products:', error)
-      alert('Error al eliminar productos: ' + (error.message || error))
+      toast.error('Error al eliminar productos: ' + (error.message || error))
     } finally {
       setLoading(false)
     }
@@ -338,8 +343,8 @@ export default function ProductsPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={handleDeleteAll}
-            className="flex items-center gap-2 px-5 py-2.5 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl hover:bg-destructive/20 transition-all font-medium"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-500/20 hover:scale-105 font-medium"
           >
             <Trash2 className="w-5 h-5" />
             <span className="hidden sm:inline">Eliminar Todo</span>
@@ -540,7 +545,6 @@ export default function ProductsPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="p-4 md:p-6 overflow-y-auto space-y-8">
-
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                   {/* Left Column: Media (5 cols) */}
                   <div className="md:col-span-5 space-y-4">
@@ -622,7 +626,49 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Pricing Row - Hidden if Sizes Enabled */}
-                    {!formData.enableSizes && (
+                    {/* Sizes Management Toggle - Moved before Price */}
+                    <div className="pt-2"> {/* Removed border-t to fit better here */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="enable-sizes"
+                            checked={formData.enableSizes}
+                            onChange={e => {
+                              const isEnabled = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                enableSizes: isEnabled,
+                                // If enabling and empty, add a default row
+                                sizes: isEnabled && prev.sizes.length === 0
+                                  ? [{ id: Date.now().toString(), name: 'Personal', price: '', stock: '', sale_price: '' }]
+                                  : prev.sizes
+                              }))
+                            }}
+                            className="w-5 h-5 rounded border-border accent-primary cursor-pointer"
+                          />
+                          <label htmlFor="enable-sizes" className="font-semibold cursor-pointer select-none">
+                            Gestionar Tamaños
+                          </label>
+                        </div>
+                        {formData.enableSizes && (
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              sizes: [...prev.sizes, { id: Date.now().toString(), name: '', price: '', stock: '', sale_price: '' }]
+                            }))}
+                            className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Agregar Tamaño
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Pricing Row - Hidden if Sizes Enabled */}
+                    {!formData.enableSizes ? (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold mb-2">Precio</label>
@@ -651,6 +697,95 @@ export default function ProductsPage() {
                             />
                           </div>
                         </div>
+                        {/* Stock for Simple Products */}
+                        <div className="col-span-2 md:col-span-1">
+                          <label className="block text-sm font-semibold mb-2">Stock (Opcional)</label>
+                          <input
+                            type="number"
+                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/50"
+                            value={(formData as any).stock || ''}
+                            onChange={e => setFormData({ ...formData, stock: e.target.value } as any)}
+                            placeholder="Ilimitado"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">Dejar vacío para stock ilimitado</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {formData.sizes.map((size, index) => (
+                          <div key={size.id} className="grid grid-cols-12 gap-3 items-end p-4 bg-muted/20 border border-border/50 rounded-xl">
+                            <div className="col-span-4 md:col-span-3">
+                              <label className="block text-xs font-semibold mb-1">Nombre</label>
+                              <input
+                                type="text"
+                                placeholder="Ej: Mediano"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                value={size.name}
+                                onChange={e => {
+                                  const newSizes = [...formData.sizes]
+                                  newSizes[index].name = e.target.value
+                                  setFormData({ ...formData, sizes: newSizes })
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-4 md:col-span-3">
+                              <label className="block text-xs font-semibold mb-1">Precio</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+                                <input
+                                  type="number"
+                                  placeholder="0"
+                                  className="w-full bg-background border border-border rounded-lg pl-6 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                  value={size.price}
+                                  onChange={e => {
+                                    const newSizes = [...formData.sizes]
+                                    newSizes[index].price = e.target.value
+                                    setFormData({ ...formData, sizes: newSizes })
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-span-4 md:col-span-3">
+                              <label className="block text-xs font-semibold mb-1">Stock</label>
+                              <input
+                                type="number"
+                                placeholder="Ilimitado"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                value={size.stock}
+                                onChange={e => {
+                                  const newSizes = [...formData.sizes]
+                                  newSizes[index].stock = e.target.value
+                                  setFormData({ ...formData, sizes: newSizes })
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-12 md:col-span-2 flex justify-end md:justify-center pb-1">
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, sizes: prev.sizes.filter((_, i) => i !== index) }))}
+                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                title="Eliminar tamaño"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {formData.sizes.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border">
+                            <p>No hay tamaños agregados</p>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                sizes: [...prev.sizes, { id: Date.now().toString(), name: 'Estándar', price: '', stock: '', sale_price: '' }]
+                              }))}
+                              className="text-primary hover:underline mt-2 text-sm"
+                            >
+                              Agregar el primer tamaño
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -690,148 +825,94 @@ export default function ProductsPage() {
                         </label>
                       </div>
                     </div>
+
+
+
                   </div>
                 </div>
 
-
-
-                {/* Sizes Management */}
-                <div className="pt-4 border-t border-border/50">
-
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <label className="text-sm font-semibold block">Gestionar Tamaños</label>
-                      <p className="text-xs text-muted-foreground">Habilita si este producto tiene variantes de tamaño (Personal, Mediano, Familiar)</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="enable-sizes"
-                        // @ts-ignore
-                        checked={formData.enableSizes}
-                        // @ts-ignore
-                        onChange={e => setFormData({ ...formData, enableSizes: e.target.checked })}
-                        className="w-5 h-5 rounded border-border accent-primary cursor-pointer"
-                      />
-                      <label htmlFor="enable-sizes" className="text-sm font-medium cursor-pointer">Habilitar</label>
-                    </div>
-                  </div>
-
-                  {/* @ts-ignore */}
-                  {formData.enableSizes && (
-                    <div className="grid grid-cols-1 gap-3 bg-muted/20 p-4 rounded-xl border border-border/50">
-                      {['Personal', 'Mediano', 'Familiar'].map((size) => (
-                        <div key={size} className="flex items-center gap-4 bg-background p-3 rounded-lg border border-border/50">
-                          <div className="w-24 font-medium text-sm">{size}</div>
-                          <div className="flex-1 grid grid-cols-3 gap-3">
-                            <div>
-                              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Precio</label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-                                <input
-                                  type="number"
-                                  // @ts-ignore
-                                  value={formData.sizes[size].price}
-                                  // @ts-ignore
-                                  onChange={e => setFormData({
-                                    ...formData,
-                                    sizes: {
-                                      // @ts-ignore
-                                      ...formData.sizes,
-                                      [size]: {
-                                        // @ts-ignore
-                                        ...formData.sizes[size],
-                                        price: e.target.value
-                                      }
-                                    }
-                                  })}
-                                  className="w-full bg-muted/30 border border-border rounded-lg pl-6 pr-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                  placeholder="0.00"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Oferta</label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-                                <input
-                                  type="number"
-                                  // @ts-ignore
-                                  value={formData.sizes[size].sale_price}
-                                  // @ts-ignore
-                                  onChange={e => setFormData({
-                                    ...formData,
-                                    sizes: {
-                                      // @ts-ignore
-                                      ...formData.sizes,
-                                      [size]: {
-                                        // @ts-ignore
-                                        ...formData.sizes[size],
-                                        sale_price: e.target.value
-                                      }
-                                    }
-                                  })}
-                                  className="w-full bg-muted/30 border border-border rounded-lg pl-6 pr-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                  placeholder="Opcional"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                            </div>
-                            <div>
-                              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Stock (Infinito si vacío)</label>
-                              <input
-                                type="number"
-                                // @ts-ignore
-                                value={formData.sizes[size].stock}
-                                // @ts-ignore
-                                onChange={e => setFormData({
-                                  ...formData,
-                                  sizes: {
-                                    // @ts-ignore
-                                    ...formData.sizes,
-                                    [size]: {
-                                      // @ts-ignore
-                                      ...formData.sizes[size],
-                                      stock: e.target.value
-                                    }
-                                  }
-                                })}
-                                className="w-full bg-muted/30 border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="∞"
-                              />
-                          </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-3 pt-4 border-t border-border/50">
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted/50 font-semibold transition-all"
-                      disabled={uploading}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/30 disabled:opacity-50"
-                      disabled={uploading}
-                    >
-                      {uploading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Guardando...
-                        </span>
-                      ) : (editingProduct ? 'Guardar Cambios' : 'Crear Comida')}
-                    </button>
-                  </div>
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted/50 font-semibold transition-all"
+                    disabled={uploading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/30 disabled:opacity-50"
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Guardando...
+                      </span>
+                    ) : (editingProduct ? 'Guardar Cambios' : 'Crear Comida')}
+                  </button>
+                </div>
               </form>
             </motion.div>
-        }
-          </AnimatePresence>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-card border border-border shadow-xl rounded-2xl p-6 overflow-hidden"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold">¿Eliminar todos los productos?</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Esta acción no se puede deshacer. Se eliminarán permanentemente todos los productos de tu menú.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 w-full pt-4">
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={loading}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Eliminando...
+                      </span>
+                    ) : 'Sí, Eliminar Todo'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
