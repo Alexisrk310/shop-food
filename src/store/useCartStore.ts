@@ -102,9 +102,17 @@ export const useCartStore = create<CartState>()(
                     const existingItem = get().items.find(i => i.id === product.id && i.size === size)
                     const currentQty = existingItem ? existingItem.quantity : 0
 
-                    const availableStock = product.stock_by_size
-                        ? (product.stock_by_size[size] || 0)
-                        : (product.stock || 0)
+                    const getAvailableStock = () => {
+                        if (product.stock_by_size) {
+                            const sizeData = product.stock_by_size[size]
+                            if (typeof sizeData === 'number') return sizeData
+                            if (sizeData && typeof sizeData === 'object') return sizeData.stock || 0
+                            return 0
+                        }
+                        return product.stock || 0
+                    }
+
+                    const availableStock = getAvailableStock()
 
                     if (currentQty + quantity > availableStock) {
                         return false // Stock limit reached
