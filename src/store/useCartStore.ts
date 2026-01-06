@@ -106,10 +106,16 @@ export const useCartStore = create<CartState>()(
                         if (product.stock_by_size) {
                             const sizeData = product.stock_by_size[size]
                             if (typeof sizeData === 'number') return sizeData
-                            if (sizeData && typeof sizeData === 'object') return sizeData.stock || 0
+                            if (sizeData && typeof sizeData === 'object') {
+                                return (sizeData.stock === null || sizeData.stock === undefined) ? 999999 : sizeData.stock
+                            }
+                            // If size key doesn't exist but stock_by_size does? Fallback to main stock? 
+                            // Or return 0 if that size is invalid? 
+                            // Usually implies 0 if key missing, but let's be safe.
                             return 0
                         }
-                        return product.stock || 0
+                        // Main stock: null/undefined means unlimited
+                        return (product.stock === null || product.stock === undefined) ? 999999 : product.stock
                     }
 
                     const availableStock = getAvailableStock()

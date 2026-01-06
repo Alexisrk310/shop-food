@@ -1,18 +1,11 @@
 export const SHIPPING_RATES: Record<string, number> = {
-  'prueba': 0,
-  'Bogotá': 10000,
-  'Medellín': 15000,
-  'Cali': 15000,
-  'Barranquilla': 18000,
-  'Cartagena': 18000,
-  'Bucaramanga': 16000,
-  'Pereira': 16000,
-  'Manizales': 16000,
-  'Cúcuta': 18000,
-  'Santa Marta': 18000,
-  // Agrega más ciudades aquí
-  'Otras Ciudades': 20000,
-  
+  // Zonas de Cartagena
+  'Zona Urbana (Bocagrande, Castillogrande, Laguito, Centro, Manga)': 6000,
+  'Zona Norte (Cielo Mar, Morros, Barcelona, Barceloneta)': 10000,
+  'Zona Sur Ocasional (Plazuela, Recreo, Socorro)': 8000,
+  'Turbaco / Arjona': 15000,
+  'Mamonal / Zona Industrial': 12000,
+  'Recogida en Local': 0
 }
 
 export const DEFAULT_SHIPPING_COST = 0

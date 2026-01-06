@@ -128,8 +128,10 @@ Total: ${totalFormatted}
 Método de Pago: WhatsApp (Transferencia/Contraentrega)
           
 Detalles de Envío:
-${formData.address}, ${formData.neighborhood}
-${formData.city} - Tel: ${formData.phone}
+Dirección: ${formData.address}
+Barrio: ${formData.neighborhood}
+Zona: ${formData.city} (Cartagena)
+Tel: ${formData.phone}
 ${formData.notes ? `Notas: ${formData.notes}` : ''}`
 
         // PHONE NUMBER: TODO replace with env
@@ -276,17 +278,18 @@ ${formData.notes ? `Notas: ${formData.notes}` : ''}`
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Ciudad</label>
+                      <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Zona de Entrega</label>
                       <select
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
                       >
-                        <option value="">Selecciona ciudad</option>
-                        {Object.keys(SHIPPING_RATES).map(city => (
-                          <option key={city} value={city}>{city}</option>
+                        <option value="">Selecciona tu zona</option>
+                        {Object.keys(SHIPPING_RATES).map(zone => (
+                          <option key={zone} value={zone}>{zone} - ${SHIPPING_RATES[zone].toLocaleString()}</option>
                         ))}
                       </select>
+                      <p className="text-[10px] text-muted-foreground mt-1">Solo envíos en Cartagena, Bolívar</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Teléfono</label>
