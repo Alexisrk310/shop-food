@@ -37,7 +37,7 @@ export async function updateOrderStatus(orderId: string, status: string, carrier
         // Also fetch product details for email
         const { data: orderItems } = await supabase
             .from('order_items')
-            .select('*, products(name, image_url)')
+            .select('*, products(name, images)')
             .eq('order_id', orderId)
 
         // Map items to structure expected by email template
@@ -46,7 +46,7 @@ export async function updateOrderStatus(orderId: string, status: string, carrier
             size: item.size || 'N/A', // Assuming size is on order_items, otherwise fallback
             quantity: item.quantity,
             price: item.price_at_time || item.price || 0,
-            image: item.products?.image_url // In case we add images to email later
+            image: item.products?.images?.[0] || item.products?.image_url // Fallback safely
         }))
 
         updatedOrder.order_items = formattedItems
@@ -138,7 +138,7 @@ export async function fetchGuestOrders(orderIds: string[]) {
             .from('order_items')
             .select(`
             id, order_id, product_id, quantity, price_at_time,
-            products ( name, image_url )
+            products ( name, images )
         `)
             .in('order_id', fetchedOrderIds)
 
