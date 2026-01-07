@@ -44,7 +44,7 @@ function FailureContent() {
 
         <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link
-            href="/cart"
+            href="/carrito"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-foreground text-background font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl"
           >
             <RefreshCw className="w-4 h-4" /> Intentar Nuevamente

@@ -28,7 +28,7 @@ function PendingContent() {
           .single()
 
         if (data?.status === 'paid') {
-          window.location.href = `/cart/success?payment_id=${paymentId}&external_reference=${orderId}`
+          window.location.href = `/carrito/success?payment_id=${paymentId}&external_reference=${orderId}`
         }
       } catch (e) {
         console.error('Polling error', e)

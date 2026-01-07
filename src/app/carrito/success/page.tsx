@@ -217,7 +217,7 @@ function SuccessContent() {
                     </Link>
 
                     <Link
-                        href="/shop"
+                        href="/catalogo"
                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl border-2 border-border bg-card hover:bg-muted font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                         <ShoppingBag className="w-5 h-5" /> Seguir Comprando

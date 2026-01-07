@@ -37,9 +37,9 @@ export const createPreference = async (items: { id: string; name: string; quanti
       })),
       external_reference: orderId,
       back_urls: {
-        success: `${baseUrl}/cart/success`,
-        failure: `${baseUrl}/cart/failure`,
-        pending: `${baseUrl}/cart/pending`,
+        success: `${baseUrl}/carrito/success`,
+        failure: `${baseUrl}/carrito/failure`,
+        pending: `${baseUrl}/carrito/pending`,
       },
       notification_url: `${baseUrl}/api/webhooks/mercadopago`,
       auto_return: 'approved',
