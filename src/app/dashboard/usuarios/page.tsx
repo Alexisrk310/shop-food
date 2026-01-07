@@ -258,8 +258,8 @@ export default function DashboardUsers() {
         if (error) throw error
       }
       else if (modalConfig.type === 'password') {
-        if (newPassword.length < 6) {
-          toast.error("La contraseña debe tener al menos 6 caracteres")
+        if (newPassword.length < 8) {
+          toast.error("La contraseña debe tener al menos 8 caracteres")
           setActionLoading(false)
           return
         }

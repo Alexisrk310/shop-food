@@ -127,8 +127,8 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
 
         if (!newAddress.phone.trim()) {
             newErrors.phone = 'Teléfono requerido'
-        } else if (!/^\d{7,15}$/.test(newAddress.phone.replace(/\D/g, ''))) {
-            newErrors.phone = 'Teléfono inválido'
+        } else if (!/^\d{10}$/.test(newAddress.phone.replace(/\D/g, ''))) {
+            newErrors.phone = 'Teléfono debe tener 10 dígitos'
         }
 
         setErrors(newErrors)
@@ -516,7 +516,10 @@ export function ProfileView({ isDashboard = false, initialTab = 'general', showS
                                                         <input
                                                             value={newAddress.phone}
                                                             onChange={e => {
-                                                                setNewAddress({ ...newAddress, phone: e.target.value })
+                                                                const val = e.target.value.replace(/\D/g, '')
+                                                                if (val.length <= 10) {
+                                                                    setNewAddress({ ...newAddress, phone: val })
+                                                                }
                                                                 clearError('phone')
                                                             }}
                                                             className={`w-full bg-muted/30 border border-transparent focus:border-primary/20 focus:bg-background rounded-xl px-4 py-3 text-sm focus:outline-none transition-all text-foreground placeholder:text-muted-foreground font-medium ${errors.phone ? 'bg-red-50 text-red-900' : ''}`}

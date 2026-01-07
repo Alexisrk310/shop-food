@@ -93,6 +93,7 @@ export default async function Home() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { name: 'Hamburguesas', icon: '🍔', slug: 'hamburguesas', color: 'from-orange-400 to-red-500' },
+            { name: 'Pizzas', icon: '🍕', slug: 'pizzas', color: 'from-orange-500 to-yellow-600' },
             { name: 'Perros Calientes', icon: '🌭', slug: 'perros', color: 'from-amber-400 to-orange-500' },
             { name: 'Salchipapas', icon: '🍟', slug: 'salchipapas', color: 'from-yellow-400 to-amber-500' },
             { name: 'Picadas', icon: '🍖', slug: 'picadas', color: 'from-red-500 to-rose-600' },

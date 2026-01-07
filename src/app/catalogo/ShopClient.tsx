@@ -13,14 +13,11 @@ interface ShopClientProps {
 }
 
 const CATEGORIES = [
-  "Perros Calientes",
-  "Salchipapas",
-  "Arepas",
-  "Maíz Desgranado",
-  "Picadas",
-  "Hamburguesas",
-  "Patacones",
-  "Asados"
+  'Hamburguesas',
+  'Pizzas',
+  'Perros Calientes',
+  'Acompañamientos',
+  'Bebidas'
 ]
 
 function ShopContent({ initialProducts }: ShopClientProps) {

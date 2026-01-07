@@ -71,7 +71,15 @@ export const useCartStore = create<CartState>()(
                     const items: CartItem[] = cartItems.map((item: any) => {
                         const p = item.product
                         // Determine effective price directly from fresh DB data
-                        const effectivePrice = p.sale_price || p.price
+                        let effectivePrice = p.sale_price || p.price
+
+                        // Check if size has specific price
+                        if (item.size && p.stock_by_size && p.stock_by_size[item.size]) {
+                            const sizeData = p.stock_by_size[item.size];
+                            if (typeof sizeData === 'object' && sizeData.price) {
+                                effectivePrice = sizeData.sale_price || sizeData.price;
+                            }
+                        }
 
                         return {
                             ...p,

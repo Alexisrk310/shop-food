@@ -175,62 +175,62 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         {/* Overlay Actions */}
         <div className="absolute inset-x-0 bottom-0 p-4 translate-y-0 lg:translate-y-full lg:group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 to-transparent flex flex-col gap-2">
 
-          {/* Size Selector */}
-          <div className="flex justify-center gap-1 bg-black/40 p-1.5 rounded-xl backdrop-blur-md" onClick={(e) => e.preventDefault()}>
-            {(() => {
-              // Determine which sizes to display
-              let displayedSizes: string[] = [];
-              if (product.stock_by_size && Object.keys(product.stock_by_size).length > 0) {
-                displayedSizes = Object.keys(product.stock_by_size);
-              } else if (product.sizes && product.sizes.length > 0) {
-                displayedSizes = product.sizes;
-              }
-              // Removed default fallback to ['Personal', 'Mediano', 'Familiar']
+          {(() => {
+            // Determine which sizes to display
+            let displayedSizes: string[] = [];
+            if (product.stock_by_size && Object.keys(product.stock_by_size).length > 0) {
+              displayedSizes = Object.keys(product.stock_by_size);
+            } else if (product.sizes && product.sizes.length > 0) {
+              displayedSizes = product.sizes;
+            }
 
-              if (displayedSizes.length === 0) return null;
+            if (displayedSizes.length === 0) return null;
 
-              return displayedSizes.map(size => {
-                // Check availability safely
-                let isAvailable = false;
+            return (
+              <div className="flex justify-center gap-1 bg-black/40 p-1.5 rounded-xl backdrop-blur-md" onClick={(e) => e.preventDefault()}>
+                {displayedSizes.map(size => {
+                  // Check availability safely
+                  let isAvailable = false;
 
-                if (product.stock_by_size) {
-                  const val = product.stock_by_size[size];
-                  if (typeof val === 'number') isAvailable = val > 0;
-                  else if (typeof val === 'object') {
-                    const stockVal = (val as any)?.stock;
-                    // If stockVal is null or undefined, it's infinite -> Available
-                    isAvailable = (stockVal === null || stockVal === undefined) ? true : stockVal > 0;
+                  if (product.stock_by_size) {
+                    const val = product.stock_by_size[size];
+                    if (typeof val === 'number') isAvailable = val > 0;
+                    else if (typeof val === 'object') {
+                      const stockVal = (val as any)?.stock;
+                      // If stockVal is null or undefined, it's infinite -> Available
+                      isAvailable = (stockVal === null || stockVal === undefined) ? true : stockVal > 0;
+                    }
+                  } else {
+                    // Fallback: check global stock if no specific size stock is tracked
+                    isAvailable = product.stock === null || (product.stock || 0) > 0;
                   }
-                } else {
-                  // Fallback: check global stock if no specific size stock is tracked
-                  isAvailable = product.stock === null || (product.stock || 0) > 0;
-                }
 
-                return (
-                  <button
-                    key={size}
-                    disabled={!isAvailable}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (isAvailable) setSelectedSize(size)
-                    }}
-                    className={`min-w-8 h-8 px-2 text-[10px] font-bold rounded-lg transition-all relative ${selectedSize === size
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                      : isAvailable ? 'text-white/80 hover:bg-white/10' : 'text-white/30 cursor-not-allowed'
-                      }`}
-                  >
-                    {size}
-                    {!isAvailable && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-full h-px bg-red-500/80 rotate-45 transform origin-center"></div>
-                      </div>
-                    )}
-                  </button>
-                )
-              })
-            })()}
-          </div>
+                  return (
+                    <button
+                      key={size}
+                      disabled={!isAvailable}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isAvailable) setSelectedSize(size)
+                      }}
+                      className={`min-w-8 h-8 px-2 text-[10px] font-bold rounded-lg transition-all relative ${selectedSize === size
+                        ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                        : isAvailable ? 'text-white/80 hover:bg-white/10' : 'text-white/30 cursor-not-allowed'
+                        }`}
+                    >
+                      {size}
+                      {!isAvailable && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-px bg-red-500/80 rotate-45 transform origin-center"></div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })()}
           {selectedSize && product.stock_by_size && (
             <div className="text-[10px] text-white/90 text-center font-medium">
               {(() => {

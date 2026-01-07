@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createPreference } from '@/lib/mercadopago';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { logActivity } from '@/lib/dashboard-logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -201,6 +202,13 @@ export async function POST(req: Request) {
 
         console.log(`Order ${orderId} created successfully. Payment Method: ${paymentMethod}`);
 
+        // Log Activity for Dashboard
+        await logActivity(
+            'NEW_ORDER',
+            `Nuevo pedido de ${name || 'Cliente'} ($${finalTotal})`,
+            { order_id: orderId, total: finalTotal, customer: name || 'Cliente' }
+        );
+
         // Handle WhatsApp Payment immediately
         if (paymentMethod === 'whatsapp') {
             return NextResponse.json({ orderId: orderId, whatsapp: true });
@@ -222,7 +230,7 @@ export async function POST(req: Request) {
 
         const preference = await createPreference(validatedItems, orderId);
 
-        return NextResponse.json({ url: preference.init_point });
+        return NextResponse.json({ url: preference.init_point, orderId: orderId });
     } catch (error: any) {
         console.error('Mercado Pago Checkout Error:', error);
         return NextResponse.json({ error: error.message || 'Payment initialization failed', details: error }, { status: 500 });

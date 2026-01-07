@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { TbMeat, TbSausage, TbMilkshake, TbPizza } from 'react-icons/tb'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Filter, Ruler, Tag, DollarSign } from 'lucide-react'
@@ -136,7 +137,7 @@ export function Sidebar({ className = "" }: { className?: string }) {
                             <Tag className="w-3 h-3" /> Categorías
                         </h4>
                         <div className="flex flex-col gap-0.5">
-                            {['Hamburguesas', 'Perros', 'Salchipapas', 'Bebidas', 'Adiciones'].map(cat => (
+                            {['Hamburguesas', 'Pizzas', 'Perros', 'Salchipapas', 'Bebidas', 'Adiciones'].map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => updateFilter('category', isActive('category', cat.toLowerCase()) ? null : cat.toLowerCase())}

@@ -427,6 +427,7 @@ export default function ProductsPage() {
           >
             <option value="">Todas las Categorías</option>
             <option value="Hamburguesas">Hamburguesas</option>
+            <option value="Pizzas">Pizzas</option>
             <option value="Perros Calientes">Perros Calientes</option>
             <option value="Acompañamientos">Acompañamientos</option>
             <option value="Bebidas">Bebidas</option>

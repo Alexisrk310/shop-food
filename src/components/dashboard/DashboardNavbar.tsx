@@ -272,7 +272,9 @@ export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                                     <p className={`text-sm font-medium leading-none ${isUnread ? 'text-foreground' : 'text-muted-foreground'}`}>
                                       {activity.action_type === 'NEW_ORDER' ? 'Nuevo Pedido' :
                                         activity.action_type === 'NEW_REVIEW' ? 'Nueva Reseña' :
-                                          activity.description
+                                          activity.action_type === 'ORDER_UPDATE' ? 'Actualización de Pedido' :
+                                            activity.action_type === 'USER_UPDATE' ? 'Actualización de Usuario' :
+                                              'Notificación del Sistema'
                                       }
                                     </p>
                                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">
@@ -281,7 +283,7 @@ export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                                   </div>
 
                                   <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2">
-                                    {activity.description}
+                                    {activity.description || "Sin descripción disponible"}
                                   </p>
 
                                   <div className="flex items-center gap-2">
