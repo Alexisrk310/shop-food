@@ -357,7 +357,7 @@ export default function MyOrdersPage() {
                                                 <div className="flex items-center gap-4">
                                                     <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                                                         {item.products?.images && item.products.images[0] && (
-                                                            <Image src={item.products.images[0]} alt={item.products.name} fill className="object-cover" />
+                                                            <Image src={item.products.images[0]} alt={item.products.name} fill className="object-cover" sizes="48px" />
                                                         )}
                                                     </div>
                                                     <div>
@@ -421,7 +421,7 @@ export default function MyOrdersPage() {
                                         <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-xl border border-border/50">
                                             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted border border-border flex-shrink-0">
                                                 {ratingModal.productImage && (
-                                                    <Image src={ratingModal.productImage} alt="" fill className="object-cover" />
+                                                    <Image src={ratingModal.productImage} alt="" fill className="object-cover" sizes="64px" />
                                                 )}
                                             </div>
                                             <div className="space-y-1">
@@ -493,7 +493,7 @@ export default function MyOrdersPage() {
                                 <div className="flex gap-4 items-start">
                                     <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
                                         {reviewPrompt.products?.images && reviewPrompt.products.images[0] && (
-                                            <Image src={reviewPrompt.products.images[0]} alt="" fill className="object-cover" />
+                                            <Image src={reviewPrompt.products.images[0]} alt="" fill className="object-cover" sizes="48px" />
                                         )}
                                     </div>
                                     <div className="flex-1">
